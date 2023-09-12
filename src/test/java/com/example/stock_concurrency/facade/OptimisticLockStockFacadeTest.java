@@ -1,7 +1,9 @@
-package com.example.stock_concurrency.service;
+package com.example.stock_concurrency.facade;
 
 import com.example.stock_concurrency.domain.Stock;
 import com.example.stock_concurrency.repository.StockRepository;
+import com.example.stock_concurrency.service.OptimisticLockStockService;
+import com.example.stock_concurrency.service.PessimisticLockStockService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +17,9 @@ import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
-class StockServiceTest {
+class OptimisticLockStockFacadeTest {
     @Autowired
-    private PessimisticLockStockService stockService;
+    private OptimisticLockStockFacade stockService;
     @Autowired
     private StockRepository stockRepository;
 
@@ -30,15 +32,6 @@ class StockServiceTest {
         stockRepository.deleteAll();
     }
     @Test
-    void decrease() {
-        stockService.decrease(1L, 1L);
-
-        // 100 - 1 = 99
-        Stock stock = stockRepository.findById(1L).orElseThrow();
-        Assertions.assertEquals(99, stock.getQuantity());
-    }
-
-    @Test
     public void 동시에_100개의_요청() throws InterruptedException {
         int threadCount = 100;
         ExecutorService executorService = Executors.newFixedThreadPool(32);
@@ -48,10 +41,12 @@ class StockServiceTest {
             executorService.submit(() -> {
                 try{
                     stockService.decrease(1L, 1L);
-                }finally {
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                } finally {
                     latch.countDown();
                     System.out.println("래치 카운터" + latch.getCount());
-                 }
+                }
             });
         }
         latch.await();
