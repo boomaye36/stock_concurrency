@@ -49,4 +49,25 @@ class ApplyServiceTest {
        long count =  couponRepository.count();
        Assertions.assertEquals(count, 100);
     }
+
+    @Test
+    public void 한명당_하나의_쿠폰() throws InterruptedException {
+        int threadCount = 1000;
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        for (int i = 0; i < threadCount; i++){
+            long userId = i;
+            executorService.submit(() -> {
+                try{
+                    applyService.apply(1L);
+                }finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        Thread.sleep(10000); // thread sleep 이용하여 데이터 처리 도중에 쿠폰이 발급되지 않도록 조정
+        long count =  couponRepository.count();
+        Assertions.assertEquals(count, 1);
+    }
 }
